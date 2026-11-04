@@ -49,3 +49,46 @@ results/           CSV tables and results.json
 ## Results
 
 Final tables are written to `results/` after a run (`rating.csv`, `ranking.csv`, `cold_start.csv`, `rerank.csv`, `results.json`).
+
+## Figures
+
+```bash
+python make_figures.py
+```
+
+writes the architecture, NDCG@10 and accuracy–coverage figures used in the paper to `figures/`.
+
+## Demo page
+
+```bash
+python export_recommendations.py --data data/ml-latest-small --results results/results.json --out docs
+```
+
+trains all models on the full dataset, builds the top-10 lists of every user for several popularity penalties, and writes a self-contained page to `docs/index.html`. Open it in a browser, or publish it with GitHub Pages (Settings, Pages, branch `main`, folder `/docs`).
+
+## API and MCP server
+
+The recommender can be consumed by an application through a small HTTP API and an MCP server. Both use only the Python standard library and read `docs/recommendations.json`, which `export_recommendations.py` writes.
+
+```bash
+cd service
+python api.py --data ../docs/recommendations.json --port 8000
+```
+
+Endpoints: `GET /health`, `GET /users`, `GET /users/{id}`, `GET /recommend?user=5&penalty=2&n=10`, `GET /movies/search?q=matrix&limit=5`.
+
+The MCP server talks to that API over stdio and offers three tools: `recommend_movies`, `user_profile` and `search_movies`. To use it from an MCP client such as Claude Desktop, add this to the client configuration (adjust the path):
+
+```json
+{
+  "mcpServers": {
+    "movielens-recommender": {
+      "command": "python",
+      "args": ["C:/path/to/movielens-hybrid-recommender/service/mcp_server.py"],
+      "env": { "RECOMMENDER_API": "http://127.0.0.1:8000" }
+    }
+  }
+}
+```
+
+The API must be running before the client calls a tool.

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MovieLens Hybrid Recommender - Demo</title>
+<style>
+  :root { --ink:#1d232b; --mute:#5e6874; --line:#dcd7cb; --paper:#f7f4ed; --card:#fffdf9; --accent:#b4571c; --accent-bg:#f6e3d2; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.45 Georgia, "Times New Roman", serif; }
+  main { max-width:1040px; margin:0 auto; padding:32px 20px 48px; }
+  h1 { font-size:28px; margin:0 0 4px; }
+  .sub { color:var(--mute); margin:0 0 24px; font-family:system-ui, sans-serif; font-size:15px; }
+  .controls { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-end; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 20px; font-family:system-ui, sans-serif; }
+  label { display:block; font-size:13px; color:var(--mute); margin-bottom:4px; }
+  select, input[type=number] { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; width:120px; }
+  input[type=range] { width:260px; accent-color:var(--accent); }
+  .lam { font-weight:600; color:var(--accent); }
+  .hint { font-size:13px; color:var(--mute); max-width:300px; }
+  .grid { display:grid; grid-template-columns:1fr 1.5fr; gap:20px; margin-top:20px; }
+  @media (max-width:760px) { .grid { grid-template-columns:1fr; } }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 20px; }
+  h2 { font-size:18px; margin:0 0 10px; }
+  ol, ul { margin:0; padding:0; list-style:none; }
+  li { padding:8px 0; border-top:1px solid var(--line); display:flex; gap:12px; }
+  li:first-child { border-top:0; }
+  .rank { color:var(--mute); width:22px; flex:none; font-family:system-ui, sans-serif; font-size:14px; padding-top:2px; }
+  .t { font-weight:600; }
+  .g { color:var(--mute); font-size:14px; font-family:system-ui, sans-serif; }
+  .pop { font-size:12px; color:var(--mute); font-family:system-ui, sans-serif; }
+  .new { font-family:system-ui, sans-serif; font-size:11px; background:var(--accent-bg); color:var(--accent); border-radius:4px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
+  .stats { margin-top:12px; font-family:system-ui, sans-serif; font-size:14px; color:var(--mute); border-top:1px solid var(--line); padding-top:10px; }
+  .stats b { color:var(--ink); }
+  footer { margin-top:24px; color:var(--mute); font-family:system-ui, sans-serif; font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>MovieLens Hybrid Recommender</h1>
+  <p class="sub">Top-10 recommendations from the hybrid of explicit and implicit models, with a popularity penalty.</p>
+
+  <div class="controls">
+    <div>
+      <label for="user">User</label>
+      <select id="user"></select>
+    </div>
+    <div>
+      <label for="lam">Popularity penalty: <span class="lam" id="lamv">0</span></label>
+      <input type="range" id="lam" min="0" value="0" step="1">
+    </div>
+    <div class="hint">0 keeps the most accurate list. Higher values push very popular movies down and bring in less known titles.</div>
+  </div>
+
+  <div class="grid">
+    <section>
+      <h2>Movies this user rated highest</h2>
+      <ul id="liked"></ul>
+      <div class="stats" id="ustats"></div>
+    </section>
+    <section>
+      <h2>Recommended for this user</h2>
+      <ol id="rec"></ol>
+      <div class="stats" id="rstats"></div>
+    </section>
+  </div>
+  <footer>Models trained on all of ml-latest-small (100,836 ratings, 610 users). Movies the user already rated are never recommended.</footer>
+</main>
+<script>
+const D = __DATA__;
+const $ = (id) => document.getElementById(id);
+const sel = $("user"), lam = $("lam");
+D.users.forEach((u, k) => { const o = document.createElement("option"); o.value = k; o.textContent = "User " + u.id; sel.appendChild(o); });
+lam.max = D.lambdas.length - 1;
+
+function item(i, rank, extra) {
+  const li = document.createElement("li");
+  const r = document.createElement("div"); r.className = "rank"; r.textContent = rank;
+  const b = document.createElement("div");
+  const t = document.createElement("div"); t.className = "t"; t.textContent = D.titles[i];
+  if (extra) { const n = document.createElement("span"); n.className = "new"; n.textContent = "new"; t.appendChild(n); }
+  const g = document.createElement("div"); g.className = "g"; g.textContent = D.genres[i];
+  const p = document.createElement("div"); p.className = "pop"; p.textContent = D.counts[i] + " ratings in the dataset";
+  b.append(t, g, p); li.append(r, b);
+  return li;
+}
+const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+
+function render() {
+  const u = D.users[+sel.value], k = +lam.value;
+  $("lamv").textContent = D.lambdas[k];
+  const base = new Set(u.rec[0]);
+  $("liked").replaceChildren(...u.liked.map((i, n) => item(i, n + 1, false)));
+  $("ustats").innerHTML = "<b>" + u.n + "</b> ratings by this user";
+  $("rec").replaceChildren(...u.rec[k].map((i, n) => item(i, n + 1, k > 0 && !base.has(i))));
+  const cur = mean(u.rec[k].map((i) => D.counts[i])), ref = mean(u.rec[0].map((i) => D.counts[i]));
+  const changed = u.rec[k].filter((i) => !base.has(i)).length;
+  $("rstats").innerHTML = "Average popularity of this list: <b>" + Math.round(cur) + "</b> ratings per movie (penalty 0: " + Math.round(ref) + "). Titles different from the penalty-0 list: <b>" + changed + "</b> of " + u.rec[k].length + ".";
+}
+sel.addEventListener("change", render);
+lam.addEventListener("input", render);
+render();
+</script>
+</body>
+</html>
