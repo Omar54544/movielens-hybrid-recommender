@@ -6,8 +6,20 @@ from urllib.parse import parse_qs, urlparse
 from core import Catalog
 
 
-def make_handler(cat):
+def make_handler(cat, app_path):
     class Handler(BaseHTTPRequestHandler):
+        def page(self):
+            try:
+                with open(app_path, "rb") as f:
+                    raw = f.read()
+            except OSError:
+                return self.reply(404, {"error": "app page not found"})
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
         def reply(self, code, body):
             raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
             self.send_response(code)
@@ -22,6 +34,8 @@ def make_handler(cat):
             q = {k: v[0] for k, v in parse_qs(url.query).items()}
             parts = [p for p in url.path.split("/") if p]
             try:
+                if parts in ([], ["app"]):
+                    return self.page()
                 if parts == ["health"]:
                     return self.reply(200, {"status": "ok", "users": len(cat.users), "movies": len(cat.titles)})
                 if parts == ["users"]:
@@ -47,12 +61,13 @@ def make_handler(cat):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="../docs/recommendations.json")
+    ap.add_argument("--app", default="../docs/telon.html")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
     args = ap.parse_args()
     cat = Catalog(args.data)
-    server = ThreadingHTTPServer((args.host, args.port), make_handler(cat))
-    print(f"API listening on http://{args.host}:{args.port} ({len(cat.users)} users)", flush=True)
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(cat, args.app))
+    print(f"API listening on http://{args.host}:{args.port} ({len(cat.users)} users). App at /", flush=True)
     server.serve_forever()
 
 

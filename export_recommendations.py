@@ -69,13 +69,14 @@ def main():
         ],
     }
     os.makedirs(args.out, exist_ok=True)
-    html = open("demo_template.html", encoding="utf-8").read()
-    html = html.replace("__DATA__", json.dumps(payload, separators=(",", ":"), ensure_ascii=False))
-    with open(f"{args.out}/index.html", "w", encoding="utf-8") as f:
-        f.write(html)
+    data = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+    for template, target in [("demo_template.html", "index.html"), ("telon_template.html", "telon.html")]:
+        html = open(template, encoding="utf-8").read().replace("__DATA__", data)
+        with open(f"{args.out}/{target}", "w", encoding="utf-8") as f:
+            f.write(html)
     with open(f"{args.out}/recommendations.json", "w", encoding="utf-8") as f:
         json.dump(payload, f, separators=(",", ":"), ensure_ascii=False)
-    print(f"wrote {args.out}/index.html and recommendations.json for {U} users, weights: " + ", ".join(f"{k}={v:.2f}" for k, v in w.items()))
+    print(f"wrote {args.out}/index.html, telon.html and recommendations.json for {U} users, weights: " + ", ".join(f"{k}={v:.2f}" for k, v in w.items()))
 
 
 if __name__ == "__main__":

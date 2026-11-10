@@ -64,7 +64,7 @@ writes the architecture, NDCG@10 and accuracy–coverage figures used in the pap
 python export_recommendations.py --data data/ml-latest-small --results results/results.json --out docs
 ```
 
-trains all models on the full dataset, builds the top-10 lists of every user for several popularity penalties, and writes a self-contained page to `docs/index.html`. Open it in a browser, or publish it with GitHub Pages (Settings, Pages, branch `main`, folder `/docs`).
+trains all models on the full dataset, builds the top-10 lists of every user for several popularity penalties, and writes two self-contained pages: `docs/index.html` (the popularity-penalty demo) and `docs/telon.html` (a mock streaming platform that consumes the service). Open them in a browser, or publish it with GitHub Pages (Settings, Pages, branch `main`, folder `/docs`).
 
 ## API and MCP server
 
@@ -92,3 +92,16 @@ The MCP server talks to that API over stdio and offers three tools: `recommend_m
 ```
 
 The API must be running before the client calls a tool.
+
+## Mock streaming platform (Telón)
+
+`docs/telon.html` simulates a streaming platform that uses the recommender as an external service. Its home page has a featured title and rows of recommendations; a side panel lets the platform set the popularity penalty and shows every call made to the API. The page looks for the API in this order: the `?api=` query parameter, the server it was opened from, and `http://127.0.0.1:8000`. If none answers it falls back to the lists embedded in the page, and a label in the header says which source is in use.
+
+To use the live API, start it and open the page from the same server:
+
+```bash
+cd service
+python api.py --data ../docs/recommendations.json --app ../docs/telon.html --port 8000
+```
+
+then open `http://127.0.0.1:8000/`. Opened from GitHub Pages, the page works with the embedded data.

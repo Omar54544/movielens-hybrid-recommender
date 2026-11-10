@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telón, plataforma de video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1e2933;
+    --panel: #293642;
+    --rule: #3a4856;
+    --text: #eef1f3;
+    --mute: #a8b3bd;
+    --live: #6fd39a;
+    --sans: "Archivo", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 var(--sans); }
+  button, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 32px; }
+  .brand { font-weight: 800; font-stretch: 125%; font-size: 30px; letter-spacing: -0.03em; }
+  .tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .who { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--mute); }
+  select { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 8px 12px; font-weight: 600; font-size: 15px; }
+  .ghost { background: transparent; border: 1px solid var(--rule); border-radius: 4px; padding: 8px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+  .ghost:hover { border-color: var(--mute); }
+  .src { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--mute); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--mute); }
+  .src.live .dot { background: var(--live); }
+
+  .hero { margin: 8px 32px 0; padding: 40px 48px; min-height: 380px; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; position: relative; overflow: hidden; transition: background-color .35s; }
+  .hero h1 { margin: 0; font-weight: 800; font-stretch: 62%; font-size: clamp(56px, 11vw, 148px); line-height: .9; letter-spacing: -0.01em; max-width: 14ch; overflow-wrap: break-word; }
+  .hero .meta { font-size: 16px; opacity: .9; }
+  .hero .year { position: absolute; bottom: 36px; right: 48px; font-weight: 800; font-stretch: 62%; font-size: 72px; line-height: 1; opacity: .4; }
+  .why { align-self: flex-start; background: #fff; color: #111; border: 0; border-radius: 4px; padding: 11px 20px; font-weight: 700; cursor: pointer; }
+  .why-text { max-width: 60ch; font-size: 15px; background: rgba(0,0,0,.28); padding: 12px 16px; border-radius: 4px; }
+  .why-text[hidden] { display: none; }
+
+  main { padding: 8px 0 72px; }
+  .row { margin-top: 32px; }
+  .row h2 { margin: 0 32px 12px; font-size: 22px; font-weight: 700; font-stretch: 112%; letter-spacing: -0.01em; }
+  .strip { display: flex; gap: 14px; overflow-x: auto; padding: 4px 32px 14px; scroll-snap-type: x proximity; scroll-padding-left: 32px; scrollbar-color: var(--rule) transparent; }
+  .poster { flex: none; width: 168px; height: 252px; border: 0; border-radius: 4px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; cursor: pointer; scroll-snap-align: start; color: #fff; position: relative; transition: transform .15s; }
+  .poster:hover { transform: translateY(-4px); }
+  .poster .g { font-size: 12px; opacity: .85; line-height: 1.3; }
+  .poster .t { font-weight: 800; font-stretch: 62%; font-size: 34px; line-height: .95; overflow-wrap: break-word; }
+  .poster .y { font-size: 12px; opacity: .85; }
+  .poster .pop { position: absolute; left: 14px; right: 14px; bottom: 36px; height: 6px; background: rgba(0,0,0,.3); display: none; }
+  .poster .pop i { display: block; height: 100%; background: #fff; }
+  .nofont .poster .t { font-size: 22px; font-stretch: 100%; line-height: 1.05; letter-spacing: -0.02em; }
+  .nofont .hero h1 { font-stretch: 100%; font-size: clamp(44px, 7vw, 96px); line-height: .95; }
+  body.showpop .poster .pop { display: block; }
+  .empty { margin: 0 32px; color: var(--mute); }
+
+  footer { padding: 24px 32px 48px; color: var(--mute); font-size: 14px; border-top: 1px solid var(--rule); margin-top: 24px; }
+
+  aside { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100vw); background: var(--panel); border-left: 1px solid var(--rule); padding: 24px; overflow-y: auto; transform: translateX(105%); transition: transform .25s; z-index: 5; }
+  aside.open { transform: none; }
+  aside h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; font-stretch: 112%; }
+  aside p { margin: 0 0 16px; color: var(--mute); font-size: 14px; }
+  aside h3 { margin: 24px 0 8px; font-size: 15px; }
+  .close { position: absolute; top: 16px; right: 16px; }
+  input[type=range] { width: 100%; accent-color: #fff; }
+  .ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--mute); padding: 0 4px; }
+  label.chk { display: flex; gap: 10px; align-items: center; font-size: 14px; margin-top: 16px; }
+  #log { list-style: none; margin: 0; padding: 0; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  #log li { padding: 8px 0; border-top: 1px solid var(--rule); word-break: break-all; }
+  #log b { color: var(--live); font-weight: 700; }
+  #log em { color: var(--mute); font-style: normal; }
+
+  @media (max-width: 640px) {
+    header, .hero, .row h2, .strip, footer, .empty { padding-left: 16px; padding-right: 16px; }
+    .row h2, .empty { margin-left: 0; margin-right: 0; }
+    .hero { margin: 8px 16px 0; padding: 24px; min-height: 300px; }
+    .hero .year { font-size: 44px; right: 24px; bottom: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">telón</div>
+  <div class="tools">
+    <span class="src" id="src"><span class="dot"></span><span id="srctext">Conectando…</span></span>
+    <label class="who" for="user">Perfil <select id="user"></select></label>
+    <button class="ghost" id="open" type="button">Panel de la plataforma</button>
+  </div>
+</header>
+
+<section class="hero" id="hero" aria-live="polite">
+  <div class="year" id="hyear"></div>
+  <h1 id="htitle"></h1>
+  <div class="meta" id="hmeta"></div>
+  <button class="why" id="whybtn" type="button">Por qué la vemos aquí</button>
+  <div class="why-text" id="why" hidden></div>
+</section>
+
+<main>
+  <section class="row"><h2>Elegidas para ti</h2><div class="strip" id="rec"></div></section>
+  <section class="row"><h2>Lo que más disfrutaste</h2><div class="strip" id="liked"></div></section>
+  <section class="row"><h2>Joyas poco vistas</h2><div class="strip" id="gems"></div></section>
+  <section class="row"><h2>Tendencia en telón</h2><div class="strip" id="trend"></div></section>
+</main>
+
+<footer>Telón es una plataforma ficticia hecha para esta demo. Las filas «Elegidas para ti» y «Joyas poco vistas» las calcula el servicio de recomendación; las demás salen del catálogo de la plataforma.</footer>
+
+<aside id="panel" aria-label="Panel de la plataforma" aria-hidden="true">
+  <button class="ghost close" id="close" type="button">Cerrar</button>
+  <h2>Panel de la plataforma</h2>
+  <p>Lo que controla la empresa que usa el servicio. Los usuarios no ven estos ajustes.</p>
+  <h3>Penalización por popularidad: <span id="lamv">0</span></h3>
+  <input type="range" id="lam" min="0" value="0" step="1" aria-label="Penalización por popularidad">
+  <div class="ticks" id="ticks" aria-hidden="true"></div>
+  <p style="margin-top:10px">0 prioriza el acierto. Más alto muestra más títulos poco conocidos. Afecta la fila «Elegidas para ti».</p>
+  <label class="chk"><input type="checkbox" id="showpop"> Mostrar la popularidad en las carátulas</label>
+  <h3>Llamadas al servicio</h3>
+  <p>Cada vez que cambias de perfil o de ajuste, la app le pide datos al servicio de recomendación.</p>
+  <ul id="log"></ul>
+</aside>
+
+<script>
+const D = __DATA__;
+const $ = (id) => document.getElementById(id);
+const COLORS = { Drama: "#8a3b4a", Comedy: "#a8641b", Action: "#a1362b", Adventure: "#2f6f5e", Crime: "#4b4a6b", Thriller: "#3b4a63", "Sci-Fi": "#2b5f8a", Horror: "#5a2a5e", Romance: "#b0476f", Animation: "#2c7f8c", Children: "#587f2a", Fantasy: "#6a4aa0", War: "#5a5a3a", Western: "#8a5a2b", Musical: "#a8447f", Mystery: "#34566b", Documentary: "#46694a", "Film-Noir": "#3a3a48", IMAX: "#2b5f8a" };
+const maxLog = Math.log(1 + Math.max(...D.counts));
+const params = new URLSearchParams(location.search);
+const bases = [];
+if (params.get("api")) bases.push(params.get("api").replace(/\/$/, ""));
+if (location.protocol === "http:") bases.push(location.origin);
+bases.push("http://127.0.0.1:8000");
+
+let api = null, token = 0, state = { recs: [], liked: [], hero: null };
+const norm = (m) => ({ title: m.title, genres: m.genres, count: m.ratings_count });
+const fromId = (i) => ({ title: D.titles[i], genres: D.genres[i], count: D.counts[i] });
+
+function parseTitle(t) {
+  const year = (t.match(/\((\d{4})\)\s*$/) || [])[1] || "";
+  let name = t.replace(/\s*\(\d{4}\)\s*$/, "").replace(/\s*\([^)]*\)\s*/g, " ").trim();
+  const m = name.match(/^(.*), (The|A|An|Les|Le|La|Il|Das|Der|Die)$/);
+  if (m) name = m[2] + " " + m[1];
+  return { name, year };
+}
+const color = (g) => COLORS[(g || "").split(",")[0].trim()] || "#46505c";
+
+function log(url, source, ms) {
+  const li = document.createElement("li");
+  li.innerHTML = source === "api" ? "<b>GET</b> " + url + " <em>" + ms + " ms</em>" : "<em>Datos guardados</em> " + url;
+  $("log").prepend(li);
+  while ($("log").children.length > 12) $("log").lastChild.remove();
+}
+
+async function call(path) {
+  const t = performance.now();
+  const r = await fetch(api + path, { signal: AbortSignal.timeout(2000) });
+  if (!r.ok) throw new Error(r.status);
+  const j = await r.json();
+  log(path, "api", Math.round(performance.now() - t));
+  return j;
+}
+
+function setSource() {
+  $("src").classList.toggle("live", !!api);
+  $("srctext").textContent = api ? "Servicio en vivo: " + api.replace(/^https?:\/\//, "") : "Datos guardados";
+}
+
+async function detect() {
+  for (const b of [...new Set(bases)]) {
+    try {
+      const r = await fetch(b + "/health", { signal: AbortSignal.timeout(1200) });
+      if (r.ok) { api = b; break; }
+    } catch (e) {}
+  }
+  setSource();
+}
+
+const lamIndex = (p) => D.lambdas.reduce((best, v, k) => Math.abs(v - p) < Math.abs(D.lambdas[best] - p) ? k : best, 0);
+
+async function recs(uid, penalty) {
+  if (api) {
+    try { return (await call("/recommend?user=" + uid + "&penalty=" + penalty + "&n=10")).recommendations.map(norm); }
+    catch (e) { api = null; setSource(); }
+  }
+  const u = D.users.find((x) => x.id === uid);
+  log("recomendar(usuario=" + uid + ", penalización=" + penalty + ")", "local", 0);
+  return u.rec[lamIndex(penalty)].map(fromId);
+}
+
+async function liked(uid) {
+  if (api) {
+    try { return (await call("/users/" + uid)).top_rated.map(norm); }
+    catch (e) { api = null; setSource(); }
+  }
+  log("perfil(usuario=" + uid + ")", "local", 0);
+  return D.users.find((x) => x.id === uid).liked.map(fromId);
+}
+
+function poster(m, onPick) {
+  const { name, year } = parseTitle(m.title);
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "poster"; b.style.background = color(m.genres);
+  b.setAttribute("aria-label", name + (year ? ", " + year : ""));
+  const g = document.createElement("div"); g.className = "g"; g.textContent = m.genres.split(",").slice(0, 2).join(", ");
+  const t = document.createElement("div"); t.className = "t"; t.textContent = name;
+  const pop = document.createElement("div"); pop.className = "pop"; const i = document.createElement("i");
+  i.style.width = Math.max(3, Math.log(1 + m.count) / maxLog * 100) + "%"; pop.appendChild(i);
+  const y = document.createElement("div"); y.className = "y"; y.textContent = year;
+  b.append(g, t, pop, y);
+  b.addEventListener("click", () => onPick(m));
+  return b;
+}
+
+function fill(id, list) {
+  $(id).replaceChildren(...list.map((m) => poster(m, setHero)));
+}
+
+function whyText(m) {
+  const uid = +$("user").value, p = D.lambdas[+$("lam").value];
+  const r = state.recs.findIndex((x) => x.title === m.title);
+  if (r >= 0) return "El servicio la puso en el puesto " + (r + 1) + " de la lista del perfil " + uid + " con penalización " + p + ". Tiene " + m.count + " calificaciones en el catálogo.";
+  if (state.liked.some((x) => x.title === m.title)) return "El perfil " + uid + " la calificó entre sus favoritas, y se usa para entender sus gustos.";
+  return "Está entre las más calificadas de la plataforma (" + m.count + " calificaciones). Esta fila no depende del perfil.";
+}
+
+function setHero(m) {
+  const { name, year } = parseTitle(m.title);
+  state.hero = m;
+  $("hero").style.background = color(m.genres);
+  $("htitle").textContent = name;
+  $("hyear").textContent = year;
+  $("hmeta").textContent = m.genres.split(",").join(", ") + ". " + m.count + " calificaciones en la plataforma.";
+  $("why").hidden = true; $("whybtn").textContent = "Por qué la vemos aquí";
+}
+
+async function render() {
+  const mine = ++token, uid = +$("user").value, p = D.lambdas[+$("lam").value];
+  $("lamv").textContent = p;
+  const [r, l, g] = await Promise.all([recs(uid, p), liked(uid), recs(uid, D.lambdas[D.lambdas.length - 1])]);
+  if (mine !== token) return;
+  state = { recs: r, liked: l, hero: null };
+  fill("rec", r); fill("liked", l); fill("gems", g.filter((x) => !r.some((y) => y.title === x.title)).slice(0, 10));
+  setHero(r[0]);
+  setSource();
+}
+
+const popular = D.counts.map((n, i) => [n, i]).sort((a, b) => b[0] - a[0]).slice(0, 10).map(([, i]) => fromId(i));
+fill("trend", popular);
+
+D.users.forEach((u) => { const o = document.createElement("option"); o.value = u.id; o.textContent = "Usuario " + u.id; $("user").appendChild(o); });
+$("lam").max = D.lambdas.length - 1;
+D.lambdas.forEach((v) => { const s = document.createElement("span"); s.textContent = v; $("ticks").appendChild(s); });
+
+$("user").addEventListener("change", render);
+$("lam").addEventListener("input", render);
+$("showpop").addEventListener("change", (e) => document.body.classList.toggle("showpop", e.target.checked));
+$("whybtn").addEventListener("click", () => {
+  const w = $("why"); w.hidden = !w.hidden;
+  if (!w.hidden) w.textContent = whyText(state.hero);
+  $("whybtn").textContent = w.hidden ? "Por qué la vemos aquí" : "Ocultar";
+});
+const panel = $("panel");
+const toggle = (open) => { panel.classList.toggle("open", open); panel.setAttribute("aria-hidden", String(!open)); if (open) $("close").focus(); else $("open").focus(); };
+$("open").addEventListener("click", () => toggle(true));
+$("close").addEventListener("click", () => toggle(false));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && panel.classList.contains("open")) toggle(false); });
+
+document.fonts.load("800 30px Archivo").then((f) => { if (!f.length) document.body.classList.add("nofont"); }, () => document.body.classList.add("nofont"));
+detect().then(render);
+</script>
+</body>
+</html>
