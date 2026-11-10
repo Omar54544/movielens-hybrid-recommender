@@ -1,4 +1,6 @@
 import json
+import os
+import time
 
 
 class Catalog:
@@ -9,6 +11,7 @@ class Catalog:
         self.titles = d["titles"]
         self.genres = d["genres"]
         self.counts = d["counts"]
+        self.movie_ids = d.get("movie_ids")
         self.avg = d.get("avg")
         self.liked_pct = d.get("liked_pct")
         self.users = {u["id"]: u for u in d["users"]}
@@ -50,3 +53,21 @@ class Catalog:
         hits = [i for i, t in enumerate(self.titles) if q and q in t.lower()]
         hits.sort(key=lambda i: -self.counts[i])
         return {"query": query, "results": [self.movie(i) for i in hits[: max(1, min(limit, 20))]]}
+
+    def add_rating(self, path, user_id, movie, rating):
+        self.user(user_id)
+        if not 0 <= movie < len(self.titles):
+            raise KeyError(f"unknown movie {movie}")
+        if rating not in [x / 2 for x in range(1, 11)]:
+            raise ValueError("rating must be between 0.5 and 5 in steps of 0.5")
+        if not self.movie_ids:
+            raise ValueError("this catalog has no movie ids, run export_recommendations.py again")
+        movie_id = self.movie_ids[movie]
+        new = not os.path.exists(path)
+        with open(path, "a", encoding="utf-8") as f:
+            if new:
+                f.write("userId,movieId,rating,timestamp\n")
+            f.write(f"{user_id},{movie_id},{rating},{int(time.time())}\n")
+        with open(path, encoding="utf-8") as f:
+            pending = sum(1 for _ in f) - 1
+        return {"saved": True, "user": user_id, "title": self.titles[movie], "rating": rating, "pending": pending}

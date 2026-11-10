@@ -77,6 +77,8 @@ python api.py --data ../docs/recommendations.json --port 8000
 
 Endpoints: `GET /health`, `GET /users`, `GET /users/{id}`, `GET /recommend?user=5&penalty=2&n=10`, `GET /movies/search?q=matrix&limit=5`.
 
+`POST /ratings` with a JSON body such as `{"user": 1, "movie": 659, "rating": 4.5}` stores a new rating in `service/new_ratings.csv`, using the MovieLens `movieId`. The next run of `export_recommendations.py` adds those ratings to the training data, so the lists change after retraining, not instantly.
+
 The MCP server talks to that API over stdio and offers three tools: `recommend_movies`, `user_profile` and `search_movies`. To use it from an MCP client such as Claude Desktop, add this to the client configuration (adjust the path):
 
 ```json
@@ -106,7 +108,7 @@ python api.py --data ../docs/recommendations.json --app ../docs/telon.html --por
 
 then open `http://127.0.0.1:8000/`. Opened from GitHub Pages, the page works with the embedded data.
 
-Every poster in the recommendation rows shows a match percentage and how many users rated the movie. Clicking a poster opens a panel over that row with the release year, the match with the selected profile, the share of users who rated it 4 or higher and the average rating. The match is the rating that the explicit blend (bias, kNN, ALS and content models) predicts for that user and movie, divided by 5. After pulling changes to `export_recommendations.py`, run it again so `docs/recommendations.json` carries these fields:
+Every poster in the recommendation rows shows a match percentage and how many users rated the movie. Clicking a poster opens a panel over that row with the release year, the match with the selected profile, the share of users who rated it 4 or higher, the average rating and stars to rate it. With the live API the rating is sent to `POST /ratings`. The match is the rating that the explicit blend (bias, kNN, ALS and content models) predicts for that user and movie, divided by 5. After pulling changes to `export_recommendations.py`, run it again so `docs/recommendations.json` carries these fields:
 
 ```bash
 python export_recommendations.py

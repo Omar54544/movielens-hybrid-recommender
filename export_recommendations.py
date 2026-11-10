@@ -1,8 +1,10 @@
 import argparse
 import json
 import os
+import time
 
 import numpy as np
+import pandas as pd
 
 from src import data, hybrid as H, metrics as M, models
 
@@ -35,22 +37,38 @@ def main():
     ap.add_argument("--results", default="results/results.json")
     ap.add_argument("--out", default="docs")
     ap.add_argument("--top", type=int, default=10)
+    ap.add_argument("--feedback", default="service/new_ratings.csv")
     args = ap.parse_args()
 
+    print(f"loading {args.data}", flush=True)
     ratings, movies, tags = data.load_movielens(args.data)
+    if os.path.exists(args.feedback):
+        extra = pd.read_csv(args.feedback)
+        users_map = dict(zip(ratings.userId, ratings.u))
+        items_map = dict(zip(movies.movieId, movies.index))
+        extra = extra[extra.userId.isin(users_map) & extra.movieId.isin(items_map)].copy()
+        extra["u"] = extra.userId.map(users_map)
+        extra["i"] = extra.movieId.map(items_map)
+        ratings = pd.concat([ratings, extra[ratings.columns]], ignore_index=True).drop_duplicates(["u", "i"], keep="last")
+        print(f"added {len(extra)} ratings from {args.feedback}", flush=True)
     U, I = int(ratings.u.max()) + 1, int(ratings.i.max()) + 1
     X, _ = data.build_tfidf(movies, tags)
 
     base = clip(models.fit_bias(ratings, U, I))
-    raw = {
-        "bias": base,
-        "knn": clip(models.item_knn(ratings, base, U, I)),
-        "als": clip(models.als_wr(ratings, base, U, I)),
-        "content": clip(models.content_ridge(ratings, base, X, U, I, 3.0)),
-        "ials": models.implicit_als(ratings, U, I),
-        "bpr": models.bpr(ratings, U, I),
-        "ease": models.ease(ratings, U, I, 1500.0),
+    steps = {
+        "knn": lambda: clip(models.item_knn(ratings, base, U, I)),
+        "als": lambda: clip(models.als_wr(ratings, base, U, I)),
+        "content": lambda: clip(models.content_ridge(ratings, base, X, U, I, 3.0)),
+        "ials": lambda: models.implicit_als(ratings, U, I),
+        "bpr": lambda: models.bpr(ratings, U, I),
+        "ease": lambda: models.ease(ratings, U, I, 1500.0),
     }
+    raw = {"bias": base}
+    for k, (name, fit) in enumerate(steps.items(), 1):
+        t = time.time()
+        print(f"[{k}/{len(steps)}] training {name}...", end=" ", flush=True)
+        raw[name] = fit()
+        print(f"{time.time() - t:.0f} s", flush=True)
     seen = M.dense_mask(ratings, (U, I))
     z = {k: M.zscore(v, seen) for k, v in raw.items()}
     w = blend_weights(args.results, list(raw))
@@ -70,6 +88,7 @@ def main():
     users = ratings.drop_duplicates("u").sort_values("u")
     payload = {
         "lambdas": LAMBDAS,
+        "movie_ids": movies.movieId.astype(int).tolist(),
         "titles": movies.title.tolist(),
         "genres": movies.genres.str.replace("|", ", ", regex=False).tolist(),
         "counts": counts.tolist(),

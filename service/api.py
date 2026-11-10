@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urlparse
 from core import Catalog
 
 
-def make_handler(cat, app_path):
+def make_handler(cat, app_path, feedback_path):
     class Handler(BaseHTTPRequestHandler):
         def page(self):
             try:
@@ -20,11 +20,16 @@ def make_handler(cat, app_path):
             self.end_headers()
             self.wfile.write(raw)
 
+        def cors(self):
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
         def reply(self, code, body):
             raw = json.dumps(body, ensure_ascii=False).encode("utf-8")
             self.send_response(code)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Access-Control-Allow-Origin", "*")
+            self.cors()
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
@@ -52,6 +57,26 @@ def make_handler(cat, app_path):
             except (ValueError, TypeError):
                 return self.reply(400, {"error": "invalid parameters"})
 
+        def do_OPTIONS(self):
+            self.send_response(204)
+            self.cors()
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def do_POST(self):
+            if urlparse(self.path).path.rstrip("/") != "/ratings":
+                return self.reply(404, {"error": "not found"})
+            try:
+                size = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(min(size, 10_000)) or b"{}")
+                result = cat.add_rating(feedback_path, int(body["user"]), int(body["movie"]), float(body["rating"]))
+                print(f"rating saved: user {result['user']}, {result['title']}, {result['rating']} ({result['pending']} pending)", flush=True)
+                return self.reply(201, result)
+            except KeyError as e:
+                return self.reply(404 if "unknown" in str(e) else 400, {"error": str(e).strip("'\"")})
+            except (ValueError, TypeError, json.JSONDecodeError) as e:
+                return self.reply(400, {"error": str(e) or "invalid body"})
+
         def log_message(self, fmt, *args):
             pass
 
@@ -64,9 +89,10 @@ def main():
     ap.add_argument("--app", default="../docs/telon.html")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--feedback", default="new_ratings.csv")
     args = ap.parse_args()
     cat = Catalog(args.data)
-    server = ThreadingHTTPServer((args.host, args.port), make_handler(cat, args.app))
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(cat, args.app, args.feedback))
     print(f"API listening on http://{args.host}:{args.port} ({len(cat.users)} users). App at /", flush=True)
     server.serve_forever()
 

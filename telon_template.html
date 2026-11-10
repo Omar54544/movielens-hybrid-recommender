@@ -62,7 +62,7 @@
   .empty { margin: 0 32px; color: var(--mute); }
 
   .stage { position: relative; }
-  .peek { position: absolute; top: 4px; bottom: 14px; left: 32px; right: 32px; z-index: 3; background: #16212a; border: 2px solid var(--live); border-left-width: 12px; border-radius: 6px; padding: 18px 24px; display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 28px; box-shadow: 0 14px 40px rgba(0,0,0,.5); }
+  .peek { position: relative; margin: 4px 32px 14px; min-height: 252px; background: #16212a; border: 2px solid var(--live); border-left-width: 12px; border-radius: 6px; padding: 18px 24px; display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 28px; box-shadow: 0 14px 40px rgba(0,0,0,.5); }
   .peek[hidden] { display: none; }
   .peek .pm { font-size: 13px; color: var(--mute); padding-right: 90px; }
   .peek .pt { margin: 6px 0 0; font-weight: 800; font-stretch: 62%; font-size: 60px; line-height: .92; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -75,8 +75,14 @@
   .peek .pbar i { display: block; height: 100%; background: var(--live); transition: width .3s; }
   .peek ul { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
   .peek li { padding: 5px 0; border-top: 1px solid var(--rule); }
+  .peek .rate { display: flex; align-items: center; gap: 4px; margin-top: 14px; font-size: 13px; color: var(--mute); flex-wrap: wrap; }
+  .peek .rate[hidden] { display: none; }
+  .peek .rate button { background: none; border: 0; padding: 0 2px; font-size: 24px; line-height: 1; color: var(--rule); cursor: pointer; }
+  .peek .rate button.on { color: #f2c94c; }
+  .peek .rate span { margin-right: 6px; }
+  .peek .rate em { font-style: normal; margin-left: 8px; color: var(--live); }
   .peek .pclose { position: absolute; top: 12px; right: 14px; padding: 6px 12px; font-size: 13px; }
-  .stage.peeking .strip { visibility: hidden; }
+  .stage.peeking .strip { display: none; }
 
   footer { padding: 24px 32px 48px; color: var(--mute); font-size: 14px; border-top: 1px solid var(--rule); margin-top: 24px; }
 
@@ -100,8 +106,7 @@
     .row h2, .empty { margin-left: 0; margin-right: 0; }
     .hero { margin: 8px 16px 0; padding: 24px; min-height: 300px; }
     .hero .year { font-size: 44px; right: 24px; bottom: 24px; }
-    .peek { position: relative; top: auto; bottom: auto; left: auto; right: auto; margin: 4px 16px 14px; grid-template-columns: 1fr; gap: 12px; padding: 16px; }
-    .stage.peeking .strip { display: none; }
+    .peek { margin: 4px 16px 14px; grid-template-columns: 1fr; gap: 12px; padding: 16px; }
     .peek .pt { font-size: 40px; }
     .peek .pr { align-self: start; }
   }
@@ -135,7 +140,7 @@
 
 <div class="peek" id="peek" hidden role="region" aria-label="Detalle de la película">
   <button class="ghost pclose" id="pclose" type="button">Cerrar</button>
-  <div><div class="pm" id="pm"></div><h3 class="pt" id="pt"></h3><p class="pw" id="pw"></p></div>
+  <div><div class="pm" id="pm"></div><h3 class="pt" id="pt"></h3><p class="pw" id="pw"></p><div class="rate" id="rate"><span>Califícala:</span><em id="rated"></em></div></div>
   <div class="pr"><div class="pnum" id="pnum"></div><div class="plab" id="plab"></div><div class="pbar"><i id="pbari"></i></div><ul id="ps"></ul></div>
 </div>
 
@@ -276,7 +281,38 @@ function setHero(m) {
   $("why").hidden = true; $("whybtn").textContent = "Por qué la vemos aquí";
 }
 
-let peekFrom = null;
+let peekFrom = null, peekMovie = null;
+const given = {};
+const stars = [1, 2, 3, 4, 5].map((n) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = "★"; b.setAttribute("aria-label", n + (n === 1 ? " estrella" : " estrellas"));
+  b.addEventListener("click", () => rate(n));
+  return b;
+});
+function paintStars(n) { stars.forEach((b, k) => b.classList.toggle("on", k < n)); }
+
+async function rate(n) {
+  const uid = +$("user").value, m = peekMovie;
+  if (!m) return;
+  given[uid + ":" + m.id] = n;
+  paintStars(n);
+  if (api) {
+    try {
+      const t = performance.now();
+      const r = await fetch(api + "/ratings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user: uid, movie: m.id, rating: n }), signal: AbortSignal.timeout(2000) });
+      if (!r.ok) throw new Error(r.status);
+      const j = await r.json();
+      const li = document.createElement("li");
+      li.innerHTML = "<b>POST</b> /ratings <em>" + Math.round(performance.now() - t) + " ms</em>";
+      li.append(" " + JSON.stringify({ user: uid, movie: m.id, rating: n }));
+      $("log").prepend(li);
+      $("rated").textContent = "Enviada al servicio. " + (j.pending === 1 ? "Hay 1 calificación nueva" : "Hay " + j.pending + " calificaciones nuevas") + " para el próximo entrenamiento.";
+      return;
+    } catch (e) { api = null; setSource(); }
+  }
+  log("calificar(usuario=" + uid + ", película=" + m.id + ", estrellas=" + n + ")", "local", 0);
+  $("rated").textContent = "Guardada solo en esta página: sin el servicio en vivo no se envía.";
+}
 function closePeek(refocus) {
   $("peek").hidden = true;
   document.querySelectorAll(".stage.peeking").forEach((x) => x.classList.remove("peeking"));
@@ -306,6 +342,12 @@ function openPeek(m, from) {
   }
   if (m.pct4 != null) items.push("Al " + m.pct4 + "% le gustó (4 o más estrellas)");
   if (m.avg != null) items.push("Promedio: " + Number(m.avg).toFixed(1) + " de 5");
+  peekMovie = m;
+  const mine = state.liked.some((x) => x.title === m.title);
+  $("rate").hidden = mine;
+  $("rate").replaceChildren($("rate").firstChild, ...stars, $("rated"));
+  $("rated").textContent = "";
+  paintStars(given[uid + ":" + m.id] || 0);
   $("ps").replaceChildren(...items.map((t) => { const li = document.createElement("li"); li.textContent = t; return li; }));
   pk.hidden = false;
   peekFrom = from;
