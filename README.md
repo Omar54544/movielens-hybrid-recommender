@@ -106,7 +106,7 @@ python api.py --data ../docs/recommendations.json --app ../docs/telon.html --por
 
 then open `http://127.0.0.1:8000/`. Opened from GitHub Pages, the page works with the embedded data.
 
-Every poster in the recommendation rows shows a match percentage and how many users rated the movie. Clicking a poster opens a detail card with the release year, the match with the selected profile, the share of users who rated it 4 or higher and the average rating. The match is the rating that the explicit blend (bias, kNN, ALS and content models) predicts for that user and movie, divided by 5. After pulling changes to `export_recommendations.py`, run it again so `docs/recommendations.json` carries these fields:
+Every poster in the recommendation rows shows a match percentage and how many users rated the movie. Clicking a poster opens a panel over that row with the release year, the match with the selected profile, the share of users who rated it 4 or higher and the average rating. The match is the rating that the explicit blend (bias, kNN, ALS and content models) predicts for that user and movie, divided by 5. After pulling changes to `export_recommendations.py`, run it again so `docs/recommendations.json` carries these fields:
 
 ```bash
 python export_recommendations.py

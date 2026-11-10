@@ -61,23 +61,22 @@
   body.showpop .poster .pop { display: block; }
   .empty { margin: 0 32px; color: var(--mute); }
 
-  .scrim { position: fixed; inset: 0; background: rgba(8,12,16,.68); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 8; }
-  .scrim[hidden] { display: none; }
-  .card { position: relative; width: min(560px, 100%); max-height: 92vh; overflow-y: auto; background: var(--panel); border-radius: 6px; }
-  .dhead { padding: 28px 28px 22px; color: #fff; }
-  .dhead .dg { font-size: 13px; opacity: .88; }
-  .dhead h2 { margin: 6px 0 4px; font-weight: 800; font-stretch: 62%; font-size: clamp(44px, 9vw, 72px); line-height: .92; overflow-wrap: break-word; max-width: 12ch; }
-  .nofont .dhead h2 { font-stretch: 100%; font-size: clamp(30px, 6vw, 44px); line-height: 1; }
-  .dhead .dy { font-size: 15px; opacity: .88; }
-  .dclose { position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,.35); border-color: transparent; color: #fff; }
-  .dbody { padding: 22px 28px 28px; display: grid; gap: 20px; }
-  .st .k { font-size: 13px; color: var(--mute); }
-  .st .v { font-size: 28px; font-weight: 800; font-stretch: 112%; line-height: 1.15; }
-  .st .v.live { color: var(--live); }
-  .st .note { font-size: 14px; color: var(--mute); margin-top: 2px; }
-  .st .bar { height: 8px; background: var(--rule); margin-top: 8px; }
-  .st .bar i { display: block; height: 100%; background: var(--live); }
-  .dwhy { font-size: 15px; border-top: 1px solid var(--rule); padding-top: 18px; }
+  .stage { position: relative; }
+  .peek { position: absolute; top: 4px; bottom: 14px; left: 32px; right: 32px; z-index: 3; background: #16212a; border: 2px solid var(--live); border-left-width: 12px; border-radius: 6px; padding: 18px 24px; display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 28px; box-shadow: 0 14px 40px rgba(0,0,0,.5); }
+  .peek[hidden] { display: none; }
+  .peek .pm { font-size: 13px; color: var(--mute); padding-right: 90px; }
+  .peek .pt { margin: 6px 0 0; font-weight: 800; font-stretch: 62%; font-size: 60px; line-height: .92; overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .nofont .peek .pt { font-stretch: 100%; font-size: 36px; line-height: 1.02; }
+  .peek .pw { margin: 12px 0 0; font-size: 14px; color: var(--mute); max-width: 56ch; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .peek .pr { align-self: end; }
+  .peek .pnum { font-size: 52px; font-weight: 800; font-stretch: 112%; line-height: 1; color: var(--live); font-variant-numeric: tabular-nums; }
+  .peek .plab { font-size: 13px; color: var(--mute); margin-top: 4px; }
+  .peek .pbar { height: 8px; background: var(--rule); margin: 10px 0 8px; }
+  .peek .pbar i { display: block; height: 100%; background: var(--live); transition: width .3s; }
+  .peek ul { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+  .peek li { padding: 5px 0; border-top: 1px solid var(--rule); }
+  .peek .pclose { position: absolute; top: 12px; right: 14px; padding: 6px 12px; font-size: 13px; }
+  .stage.peeking .strip { visibility: hidden; }
 
   footer { padding: 24px 32px 48px; color: var(--mute); font-size: 14px; border-top: 1px solid var(--rule); margin-top: 24px; }
 
@@ -101,6 +100,10 @@
     .row h2, .empty { margin-left: 0; margin-right: 0; }
     .hero { margin: 8px 16px 0; padding: 24px; min-height: 300px; }
     .hero .year { font-size: 44px; right: 24px; bottom: 24px; }
+    .peek { position: relative; top: auto; bottom: auto; left: auto; right: auto; margin: 4px 16px 14px; grid-template-columns: 1fr; gap: 12px; padding: 16px; }
+    .stage.peeking .strip { display: none; }
+    .peek .pt { font-size: 40px; }
+    .peek .pr { align-self: start; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -124,21 +127,19 @@
 </section>
 
 <main>
-  <section class="row"><h2>Elegidas para ti</h2><div class="strip" id="rec"></div></section>
-  <section class="row"><h2>Lo que más disfrutaste</h2><div class="strip" id="liked"></div></section>
-  <section class="row"><h2>Joyas poco vistas</h2><div class="strip" id="gems"></div></section>
-  <section class="row"><h2>Tendencia en telón</h2><div class="strip" id="trend"></div></section>
+  <section class="row"><h2>Elegidas para ti</h2><div class="stage"><div class="strip" id="rec"></div></div></section>
+  <section class="row"><h2>Lo que más disfrutaste</h2><div class="stage"><div class="strip" id="liked"></div></div></section>
+  <section class="row"><h2>Joyas poco vistas</h2><div class="stage"><div class="strip" id="gems"></div></div></section>
+  <section class="row"><h2>Tendencia en telón</h2><div class="stage"><div class="strip" id="trend"></div></div></section>
 </main>
 
-<footer>Telón es una plataforma ficticia hecha para esta demo. Las filas «Elegidas para ti» y «Joyas poco vistas» las calcula el servicio de recomendación; las demás salen del catálogo de la plataforma.</footer>
-
-<div class="scrim" id="scrim" hidden>
-  <div class="card" role="dialog" aria-modal="true" aria-labelledby="dtitle">
-    <button class="ghost dclose" id="dclose" type="button">Cerrar</button>
-    <div class="dhead" id="dhead"><div class="dg" id="dg"></div><h2 id="dtitle"></h2><div class="dy" id="dy"></div></div>
-    <div class="dbody" id="dbody"></div>
-  </div>
+<div class="peek" id="peek" hidden role="region" aria-label="Detalle de la película">
+  <button class="ghost pclose" id="pclose" type="button">Cerrar</button>
+  <div><div class="pm" id="pm"></div><h3 class="pt" id="pt"></h3><p class="pw" id="pw"></p></div>
+  <div class="pr"><div class="pnum" id="pnum"></div><div class="plab" id="plab"></div><div class="pbar"><i id="pbari"></i></div><ul id="ps"></ul></div>
 </div>
+
+<footer>Telón es una plataforma ficticia hecha para esta demo. Las filas «Elegidas para ti» y «Joyas poco vistas» las calcula el servicio de recomendación; las demás salen del catálogo de la plataforma.</footer>
 
 <aside id="panel" aria-label="Panel de la plataforma" aria-hidden="true">
   <button class="ghost close" id="close" type="button">Cerrar</button>
@@ -245,7 +246,7 @@ function poster(m, onPick) {
   const bt = document.createElement("div"); bt.className = "b";
   const n = document.createElement("div"); n.className = "n"; n.textContent = m.count.toLocaleString("es") + (m.count === 1 ? " calificación" : " calificaciones");
   const r = document.createElement("div"); r.className = "r";
-  if (m.match != null) { const mm = document.createElement("span"); mm.className = "m"; mm.textContent = m.match + "% afín"; r.append(mm); b.setAttribute("aria-label", name + ", " + m.match + "% de afinidad"); }
+  if (m.match != null) { const mm = document.createElement("span"); mm.className = "m"; mm.textContent = m.match + "% de interés"; r.append(mm); b.setAttribute("aria-label", name + ", " + m.match + "% de interés"); }
   r.append(y); bt.append(n, r);
   b.append(g, t, pop, bt);
   b.addEventListener("click", () => onPick(m, b));
@@ -259,9 +260,8 @@ function fill(id, list) {
 function whyText(m) {
   const uid = +$("user").value, p = D.lambdas[+$("lam").value];
   const r = state.recs.findIndex((x) => x.title === m.title);
-  const afin = m.match != null ? " El servicio estima una afinidad de " + m.match + "% con este perfil." : "";
-  if (r >= 0) return "El servicio la puso en el puesto " + (r + 1) + " de la lista del perfil " + uid + " con nivel de descubrimiento " + p + ". Tiene " + m.count + " calificaciones en el catálogo." + afin;
-  if (state.gems.some((x) => x.title === m.title)) return "Pocos usuarios la han calificado (" + m.count + "), pero el servicio cree que encaja con el perfil " + uid + ". Sale en esta fila porque, con el nivel de descubrimiento más alto, se da paso a títulos menos conocidos." + afin;
+  if (r >= 0) return "El servicio la puso en el puesto " + (r + 1) + " de la lista del perfil " + uid + " con nivel de descubrimiento " + p + ". Tiene " + m.count + " calificaciones en el catálogo.";
+  if (state.gems.some((x) => x.title === m.title)) return "Pocos usuarios la han calificado (" + m.count + "), pero el servicio cree que encaja con el perfil " + uid + ". Sale en esta fila porque, con el nivel de descubrimiento más alto, se da paso a títulos menos conocidos.";
   if (state.liked.some((x) => x.title === m.title)) return "El perfil " + uid + " la calificó entre sus favoritas, y se usa para entender sus gustos.";
   return "Está entre las más calificadas de la plataforma (" + m.count + " calificaciones). Esta fila no depende del perfil.";
 }
@@ -272,42 +272,50 @@ function setHero(m) {
   $("hero").style.background = color(m.genres);
   $("htitle").textContent = name;
   $("hyear").textContent = year;
-  $("hmeta").textContent = m.genres.split(",").join(", ") + ". " + m.count + " calificaciones en la plataforma." + (m.match != null ? " " + m.match + "% de afinidad con este perfil." : "");
+  $("hmeta").textContent = m.genres.split(",").join(", ") + ". " + m.count + " calificaciones en la plataforma." + (m.match != null ? " " + m.match + "% de interés para este perfil." : "");
   $("why").hidden = true; $("whybtn").textContent = "Por qué la vemos aquí";
 }
 
-function stat(k, v, note, pct, live) {
-  const d = document.createElement("div"); d.className = "st";
-  const a = document.createElement("div"); a.className = "k"; a.textContent = k;
-  const b = document.createElement("div"); b.className = "v" + (live ? " live" : ""); b.textContent = v;
-  d.append(a, b);
-  if (note) { const c = document.createElement("div"); c.className = "note"; c.textContent = note; d.append(c); }
-  if (pct != null) { const bar = document.createElement("div"); bar.className = "bar"; const i = document.createElement("i"); i.style.width = pct + "%"; bar.append(i); d.append(bar); }
-  return d;
+let peekFrom = null;
+function closePeek(refocus) {
+  $("peek").hidden = true;
+  document.querySelectorAll(".stage.peeking").forEach((x) => x.classList.remove("peeking"));
+  if (peekFrom && refocus) peekFrom.focus();
+  peekFrom = null;
 }
-
-let lastFocus = null;
-function openDetail(m, from) {
-  const { name, year } = parseTitle(m.title), uid = +$("user").value;
-  lastFocus = from || null;
-  $("dhead").style.background = color(m.genres);
-  $("dg").textContent = m.genres.split(",").map((x) => x.trim()).join(", ");
-  $("dtitle").textContent = name;
-  $("dy").textContent = year ? "Estreno: " + year : "";
-  const body = [];
-  if (m.match != null) body.push(stat("Afinidad con el perfil " + uid, m.match + "%", "Es la calificación que el servicio predice para este perfil (" + (m.match / 20).toFixed(1) + " de 5), expresada sobre 100.", m.match, true));
-  body.push(stat("La calificaron", m.count.toLocaleString("es") + " de " + NU + " usuarios", Math.round(m.count / NU * 100) + "% de los usuarios de la plataforma"));
-  if (m.pct4 != null) body.push(stat("A quienes la vieron les gustó", m.pct4 + "%", "La calificaron con 4 o más estrellas" + (m.avg != null ? ". Promedio: " + Number(m.avg).toFixed(1) + " de 5." : "."), m.pct4));
-  const w = document.createElement("div"); w.className = "dwhy"; w.textContent = whyText(m);
-  $("dbody").replaceChildren(...body, w);
-  $("scrim").hidden = false;
-  $("dclose").focus();
+function openPeek(m, from) {
+  const { name, year } = parseTitle(m.title), uid = +$("user").value, pk = $("peek");
+  document.querySelectorAll(".stage.peeking").forEach((x) => x.classList.remove("peeking"));
+  const stage = from.closest(".stage");
+  stage.append(pk); stage.classList.add("peeking");
+  pk.style.borderLeftColor = color(m.genres);
+  $("pm").textContent = [m.genres.split(",").map((x) => x.trim()).slice(0, 3).join(", "), year].filter(Boolean).join(" · ");
+  $("pt").textContent = name;
+  $("pw").textContent = whyText(m);
+  const share = Math.round(m.count / NU * 100), items = [];
+  if (m.match != null) {
+    $("pnum").textContent = m.match + "%";
+    $("plab").textContent = "de interés estimado para el perfil " + uid;
+    $("pbari").style.width = m.match + "%";
+    items.push("El servicio predice que le daría " + (m.match / 20).toFixed(1) + " de 5");
+    items.push("La calificaron " + m.count.toLocaleString("es") + " de " + NU + " usuarios");
+  } else {
+    $("pnum").textContent = m.count.toLocaleString("es");
+    $("plab").textContent = "de " + NU + " usuarios la calificaron";
+    $("pbari").style.width = share + "%";
+  }
+  if (m.pct4 != null) items.push("Al " + m.pct4 + "% le gustó (4 o más estrellas)");
+  if (m.avg != null) items.push("Promedio: " + Number(m.avg).toFixed(1) + " de 5");
+  $("ps").replaceChildren(...items.map((t) => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  pk.hidden = false;
+  peekFrom = from;
+  $("pclose").focus();
 }
-function closeDetail() { $("scrim").hidden = true; if (lastFocus) lastFocus.focus(); }
-function pick(m, from) { setHero(m); openDetail(m, from); }
+const pick = openPeek;
 
 async function render() {
   const mine = ++token, uid = +$("user").value, p = D.lambdas[+$("lam").value];
+  closePeek(false);
   $("lamv").textContent = p;
   const [r, l, g] = await Promise.all([recs(uid, p), liked(uid), recs(uid, D.lambdas[D.lambdas.length - 1])]);
   if (mine !== token) return;
@@ -337,11 +345,10 @@ const panel = $("panel");
 const toggle = (open) => { panel.classList.toggle("open", open); panel.setAttribute("aria-hidden", String(!open)); if (open) $("close").focus(); else $("open").focus(); };
 $("open").addEventListener("click", () => toggle(true));
 $("close").addEventListener("click", () => toggle(false));
-$("dclose").addEventListener("click", closeDetail);
-$("scrim").addEventListener("click", (e) => { if (e.target === $("scrim")) closeDetail(); });
+$("pclose").addEventListener("click", () => closePeek(true));
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (!$("scrim").hidden) closeDetail();
+  if (!$("peek").hidden) closePeek(true);
   else if (panel.classList.contains("open")) toggle(false);
 });
 
