@@ -22,6 +22,13 @@ def blend_weights(path, names):
     return {k: v / total for k, v in w.items()}
 
 
+def rating_weights(path, names):
+    if not os.path.exists(path):
+        return {k: 1 / len(names) for k in names}
+    runs = json.load(open(path))["blend_weights"]["rating"]
+    return {k: float(np.mean([r[k] for r in runs])) for k in names}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data/ml-latest-small")
@@ -49,6 +56,10 @@ def main():
     w = blend_weights(args.results, list(raw))
     score = H.apply_ranking_blend(z, w)
     counts = np.bincount(ratings.i.values, minlength=I)
+    explicit = ["bias", "knn", "als", "content"]
+    pred = clip(H.apply_blend({k: raw[k] for k in explicit}, rating_weights(args.results, explicit)))
+    avg = ratings.groupby("i").rating.mean().reindex(range(I)).fillna(0).round(2)
+    liked_pct = (ratings.rating >= 4).groupby(ratings.i).mean().reindex(range(I)).fillna(0).mul(100).round().astype(int)
     tops = [M.top_k(H.popularity_penalty(score, counts, lam), seen, args.top) for lam in LAMBDAS]
 
     liked = (
@@ -62,16 +73,19 @@ def main():
         "titles": movies.title.tolist(),
         "genres": movies.genres.str.replace("|", ", ", regex=False).tolist(),
         "counts": counts.tolist(),
+        "avg": avg.tolist(),
+        "liked_pct": liked_pct.tolist(),
         "users": [
             {"id": int(users.userId.iloc[k]), "n": int(n_rated[k]), "liked": liked[k],
-             "rec": [t[k].tolist() for t in tops]}
+             "rec": [t[k].tolist() for t in tops],
+             "m": {str(i): int(round(pred[k, i] / 5 * 100)) for i in sorted({j for t in tops for j in t[k]})}}
             for k in range(U)
         ],
     }
     os.makedirs(args.out, exist_ok=True)
-    data = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+    blob = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     for template, target in [("demo_template.html", "index.html"), ("telon_template.html", "telon.html")]:
-        html = open(template, encoding="utf-8").read().replace("__DATA__", data)
+        html = open(template, encoding="utf-8").read().replace("__DATA__", blob)
         with open(f"{args.out}/{target}", "w", encoding="utf-8") as f:
             f.write(html)
     with open(f"{args.out}/recommendations.json", "w", encoding="utf-8") as f:

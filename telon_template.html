@@ -49,13 +49,35 @@
   .poster:hover { transform: translateY(-4px); }
   .poster .g { font-size: 12px; opacity: .85; line-height: 1.3; }
   .poster .t { font-weight: 800; font-stretch: 62%; font-size: 34px; line-height: .95; overflow-wrap: break-word; }
-  .poster .y { font-size: 12px; opacity: .85; }
-  .poster .pop { position: absolute; left: 14px; right: 14px; bottom: 36px; height: 6px; background: rgba(0,0,0,.3); display: none; }
+  .poster .b { display: flex; flex-direction: column; gap: 6px; }
+  .poster .n { font-size: 11.5px; opacity: .85; line-height: 1.2; }
+  .poster .r { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; min-height: 22px; }
+  .poster .m { font-weight: 700; background: rgba(0,0,0,.38); color: #a6f2c6; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+  .poster .y { font-size: 12px; opacity: .85; margin-left: auto; }
+  .poster .pop { position: absolute; left: 14px; right: 14px; bottom: 66px; height: 6px; background: rgba(0,0,0,.3); display: none; }
   .poster .pop i { display: block; height: 100%; background: #fff; }
   .nofont .poster .t { font-size: 22px; font-stretch: 100%; line-height: 1.05; letter-spacing: -0.02em; }
   .nofont .hero h1 { font-stretch: 100%; font-size: clamp(44px, 7vw, 96px); line-height: .95; }
   body.showpop .poster .pop { display: block; }
   .empty { margin: 0 32px; color: var(--mute); }
+
+  .scrim { position: fixed; inset: 0; background: rgba(8,12,16,.68); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 8; }
+  .scrim[hidden] { display: none; }
+  .card { position: relative; width: min(560px, 100%); max-height: 92vh; overflow-y: auto; background: var(--panel); border-radius: 6px; }
+  .dhead { padding: 28px 28px 22px; color: #fff; }
+  .dhead .dg { font-size: 13px; opacity: .88; }
+  .dhead h2 { margin: 6px 0 4px; font-weight: 800; font-stretch: 62%; font-size: clamp(44px, 9vw, 72px); line-height: .92; overflow-wrap: break-word; max-width: 12ch; }
+  .nofont .dhead h2 { font-stretch: 100%; font-size: clamp(30px, 6vw, 44px); line-height: 1; }
+  .dhead .dy { font-size: 15px; opacity: .88; }
+  .dclose { position: absolute; top: 14px; right: 14px; background: rgba(0,0,0,.35); border-color: transparent; color: #fff; }
+  .dbody { padding: 22px 28px 28px; display: grid; gap: 20px; }
+  .st .k { font-size: 13px; color: var(--mute); }
+  .st .v { font-size: 28px; font-weight: 800; font-stretch: 112%; line-height: 1.15; }
+  .st .v.live { color: var(--live); }
+  .st .note { font-size: 14px; color: var(--mute); margin-top: 2px; }
+  .st .bar { height: 8px; background: var(--rule); margin-top: 8px; }
+  .st .bar i { display: block; height: 100%; background: var(--live); }
+  .dwhy { font-size: 15px; border-top: 1px solid var(--rule); padding-top: 18px; }
 
   footer { padding: 24px 32px 48px; color: var(--mute); font-size: 14px; border-top: 1px solid var(--rule); margin-top: 24px; }
 
@@ -110,6 +132,14 @@
 
 <footer>Telón es una plataforma ficticia hecha para esta demo. Las filas «Elegidas para ti» y «Joyas poco vistas» las calcula el servicio de recomendación; las demás salen del catálogo de la plataforma.</footer>
 
+<div class="scrim" id="scrim" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="dtitle">
+    <button class="ghost dclose" id="dclose" type="button">Cerrar</button>
+    <div class="dhead" id="dhead"><div class="dg" id="dg"></div><h2 id="dtitle"></h2><div class="dy" id="dy"></div></div>
+    <div class="dbody" id="dbody"></div>
+  </div>
+</div>
+
 <aside id="panel" aria-label="Panel de la plataforma" aria-hidden="true">
   <button class="ghost close" id="close" type="button">Cerrar</button>
   <h2>Panel de la plataforma</h2>
@@ -136,9 +166,10 @@ if (params.get("api")) bases.push(params.get("api").replace(/\/$/, ""));
 if (location.protocol === "http:") bases.push(location.origin);
 bases.push("http://127.0.0.1:8000");
 
-let api = null, token = 0, state = { recs: [], liked: [], hero: null };
-const norm = (m) => ({ title: m.title, genres: m.genres, count: m.ratings_count });
-const fromId = (i) => ({ title: D.titles[i], genres: D.genres[i], count: D.counts[i] });
+let api = null, token = 0, state = { recs: [], liked: [], gems: [], hero: null };
+const NU = D.users.length;
+const norm = (m) => ({ id: m.id, title: m.title, genres: m.genres, count: m.ratings_count, avg: m.avg_rating, pct4: m.liked_pct, match: m.match });
+const fromId = (i, u) => ({ id: i, title: D.titles[i], genres: D.genres[i], count: D.counts[i], avg: D.avg && D.avg[i], pct4: D.liked_pct && D.liked_pct[i], match: u && u.m ? u.m[i] : undefined });
 
 function parseTitle(t) {
   const year = (t.match(/\((\d{4})\)\s*$/) || [])[1] || "";
@@ -189,7 +220,7 @@ async function recs(uid, penalty) {
   }
   const u = D.users.find((x) => x.id === uid);
   log("recomendar(usuario=" + uid + ", descubrimiento=" + penalty + ")", "local", 0);
-  return u.rec[lamIndex(penalty)].map(fromId);
+  return u.rec[lamIndex(penalty)].map((i) => fromId(i, u));
 }
 
 async function liked(uid) {
@@ -198,7 +229,7 @@ async function liked(uid) {
     catch (e) { api = null; setSource(); }
   }
   log("perfil(usuario=" + uid + ")", "local", 0);
-  return D.users.find((x) => x.id === uid).liked.map(fromId);
+  return D.users.find((x) => x.id === uid).liked.map((i) => fromId(i));
 }
 
 function poster(m, onPick) {
@@ -211,19 +242,26 @@ function poster(m, onPick) {
   const pop = document.createElement("div"); pop.className = "pop"; const i = document.createElement("i");
   i.style.width = Math.max(3, Math.log(1 + m.count) / maxLog * 100) + "%"; pop.appendChild(i);
   const y = document.createElement("div"); y.className = "y"; y.textContent = year;
-  b.append(g, t, pop, y);
-  b.addEventListener("click", () => onPick(m));
+  const bt = document.createElement("div"); bt.className = "b";
+  const n = document.createElement("div"); n.className = "n"; n.textContent = m.count.toLocaleString("es") + (m.count === 1 ? " calificación" : " calificaciones");
+  const r = document.createElement("div"); r.className = "r";
+  if (m.match != null) { const mm = document.createElement("span"); mm.className = "m"; mm.textContent = m.match + "% afín"; r.append(mm); b.setAttribute("aria-label", name + ", " + m.match + "% de afinidad"); }
+  r.append(y); bt.append(n, r);
+  b.append(g, t, pop, bt);
+  b.addEventListener("click", () => onPick(m, b));
   return b;
 }
 
 function fill(id, list) {
-  $(id).replaceChildren(...list.map((m) => poster(m, setHero)));
+  $(id).replaceChildren(...list.map((m) => poster(m, pick)));
 }
 
 function whyText(m) {
   const uid = +$("user").value, p = D.lambdas[+$("lam").value];
   const r = state.recs.findIndex((x) => x.title === m.title);
-  if (r >= 0) return "El servicio la puso en el puesto " + (r + 1) + " de la lista del perfil " + uid + " con nivel de descubrimiento " + p + ". Tiene " + m.count + " calificaciones en el catálogo.";
+  const afin = m.match != null ? " El servicio estima una afinidad de " + m.match + "% con este perfil." : "";
+  if (r >= 0) return "El servicio la puso en el puesto " + (r + 1) + " de la lista del perfil " + uid + " con nivel de descubrimiento " + p + ". Tiene " + m.count + " calificaciones en el catálogo." + afin;
+  if (state.gems.some((x) => x.title === m.title)) return "Pocos usuarios la han calificado (" + m.count + "), pero el servicio cree que encaja con el perfil " + uid + ". Sale en esta fila porque, con el nivel de descubrimiento más alto, se da paso a títulos menos conocidos." + afin;
   if (state.liked.some((x) => x.title === m.title)) return "El perfil " + uid + " la calificó entre sus favoritas, y se usa para entender sus gustos.";
   return "Está entre las más calificadas de la plataforma (" + m.count + " calificaciones). Esta fila no depende del perfil.";
 }
@@ -234,17 +272,48 @@ function setHero(m) {
   $("hero").style.background = color(m.genres);
   $("htitle").textContent = name;
   $("hyear").textContent = year;
-  $("hmeta").textContent = m.genres.split(",").join(", ") + ". " + m.count + " calificaciones en la plataforma.";
+  $("hmeta").textContent = m.genres.split(",").join(", ") + ". " + m.count + " calificaciones en la plataforma." + (m.match != null ? " " + m.match + "% de afinidad con este perfil." : "");
   $("why").hidden = true; $("whybtn").textContent = "Por qué la vemos aquí";
 }
+
+function stat(k, v, note, pct, live) {
+  const d = document.createElement("div"); d.className = "st";
+  const a = document.createElement("div"); a.className = "k"; a.textContent = k;
+  const b = document.createElement("div"); b.className = "v" + (live ? " live" : ""); b.textContent = v;
+  d.append(a, b);
+  if (note) { const c = document.createElement("div"); c.className = "note"; c.textContent = note; d.append(c); }
+  if (pct != null) { const bar = document.createElement("div"); bar.className = "bar"; const i = document.createElement("i"); i.style.width = pct + "%"; bar.append(i); d.append(bar); }
+  return d;
+}
+
+let lastFocus = null;
+function openDetail(m, from) {
+  const { name, year } = parseTitle(m.title), uid = +$("user").value;
+  lastFocus = from || null;
+  $("dhead").style.background = color(m.genres);
+  $("dg").textContent = m.genres.split(",").map((x) => x.trim()).join(", ");
+  $("dtitle").textContent = name;
+  $("dy").textContent = year ? "Estreno: " + year : "";
+  const body = [];
+  if (m.match != null) body.push(stat("Afinidad con el perfil " + uid, m.match + "%", "Es la calificación que el servicio predice para este perfil (" + (m.match / 20).toFixed(1) + " de 5), expresada sobre 100.", m.match, true));
+  body.push(stat("La calificaron", m.count.toLocaleString("es") + " de " + NU + " usuarios", Math.round(m.count / NU * 100) + "% de los usuarios de la plataforma"));
+  if (m.pct4 != null) body.push(stat("A quienes la vieron les gustó", m.pct4 + "%", "La calificaron con 4 o más estrellas" + (m.avg != null ? ". Promedio: " + Number(m.avg).toFixed(1) + " de 5." : "."), m.pct4));
+  const w = document.createElement("div"); w.className = "dwhy"; w.textContent = whyText(m);
+  $("dbody").replaceChildren(...body, w);
+  $("scrim").hidden = false;
+  $("dclose").focus();
+}
+function closeDetail() { $("scrim").hidden = true; if (lastFocus) lastFocus.focus(); }
+function pick(m, from) { setHero(m); openDetail(m, from); }
 
 async function render() {
   const mine = ++token, uid = +$("user").value, p = D.lambdas[+$("lam").value];
   $("lamv").textContent = p;
   const [r, l, g] = await Promise.all([recs(uid, p), liked(uid), recs(uid, D.lambdas[D.lambdas.length - 1])]);
   if (mine !== token) return;
-  state = { recs: r, liked: l, hero: null };
-  fill("rec", r); fill("liked", l); fill("gems", g.filter((x) => !r.some((y) => y.title === x.title)).slice(0, 10));
+  const gems = g.filter((x) => !r.some((y) => y.title === x.title)).slice(0, 10);
+  state = { recs: r, liked: l, gems, hero: null };
+  fill("rec", r); fill("liked", l); fill("gems", gems);
   setHero(r[0]);
   setSource();
 }
@@ -268,7 +337,13 @@ const panel = $("panel");
 const toggle = (open) => { panel.classList.toggle("open", open); panel.setAttribute("aria-hidden", String(!open)); if (open) $("close").focus(); else $("open").focus(); };
 $("open").addEventListener("click", () => toggle(true));
 $("close").addEventListener("click", () => toggle(false));
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && panel.classList.contains("open")) toggle(false); });
+$("dclose").addEventListener("click", closeDetail);
+$("scrim").addEventListener("click", (e) => { if (e.target === $("scrim")) closeDetail(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!$("scrim").hidden) closeDetail();
+  else if (panel.classList.contains("open")) toggle(false);
+});
 
 document.fonts.load("800 30px Archivo").then((f) => { if (!f.length) document.body.classList.add("nofont"); }, () => document.body.classList.add("nofont"));
 detect().then(render);

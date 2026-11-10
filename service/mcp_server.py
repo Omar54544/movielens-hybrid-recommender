@@ -58,7 +58,8 @@ def call_api(path, params=None):
 
 def fmt_movie(m):
     prefix = f"{m['rank']}. " if "rank" in m else "- "
-    return f"{prefix}{m['title']} ({m['genres']}), {m['ratings_count']} ratings"
+    match = f", {m['match']}% match" if "match" in m else ""
+    return f"{prefix}{m['title']} ({m['genres']}), {m['ratings_count']} ratings{match}"
 
 
 def run_tool(name, a):

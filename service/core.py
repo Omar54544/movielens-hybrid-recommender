@@ -9,10 +9,18 @@ class Catalog:
         self.titles = d["titles"]
         self.genres = d["genres"]
         self.counts = d["counts"]
+        self.avg = d.get("avg")
+        self.liked_pct = d.get("liked_pct")
         self.users = {u["id"]: u for u in d["users"]}
 
-    def movie(self, i, rank=None):
-        m = {"title": self.titles[i], "genres": self.genres[i], "ratings_count": self.counts[i]}
+    def movie(self, i, rank=None, user=None):
+        m = {"id": i, "title": self.titles[i], "genres": self.genres[i], "ratings_count": self.counts[i]}
+        if self.avg:
+            m["avg_rating"] = self.avg[i]
+        if self.liked_pct:
+            m["liked_pct"] = self.liked_pct[i]
+        if user is not None and str(i) in user.get("m", {}):
+            m["match"] = user["m"][str(i)]
         if rank is not None:
             m = {"rank": rank, **m}
         return m
@@ -29,7 +37,7 @@ class Catalog:
         u = self.user(user_id)
         used = self.snap(penalty)
         ids = u["rec"][self.lambdas.index(used)][: max(1, min(n, 10))]
-        recs = [self.movie(i, k + 1) for k, i in enumerate(ids)]
+        recs = [self.movie(i, k + 1, u) for k, i in enumerate(ids)]
         avg = sum(self.counts[i] for i in ids) / len(ids)
         return {"user": user_id, "penalty": used, "recommendations": recs, "avg_ratings_count": round(avg, 1)}
 
