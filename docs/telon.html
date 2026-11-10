@@ -68,6 +68,7 @@
   input[type=range] { width: 100%; accent-color: #fff; }
   .ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--mute); padding: 0 4px; }
   label.chk { display: flex; gap: 10px; align-items: center; font-size: 14px; margin-top: 16px; }
+  .ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--mute); margin-top: 4px; }
   #log { list-style: none; margin: 0; padding: 0; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   #log li { padding: 8px 0; border-top: 1px solid var(--rule); word-break: break-all; }
   #log b { color: var(--live); font-weight: 700; }
@@ -113,10 +114,11 @@
   <button class="ghost close" id="close" type="button">Cerrar</button>
   <h2>Panel de la plataforma</h2>
   <p>Lo que controla la empresa que usa el servicio. Los usuarios no ven estos ajustes.</p>
-  <h3>Penalización por popularidad: <span id="lamv">0</span></h3>
-  <input type="range" id="lam" min="0" value="0" step="1" aria-label="Penalización por popularidad">
+  <h3>Nivel de descubrimiento: <span id="lamv">0</span></h3>
+  <input type="range" id="lam" min="0" value="0" step="1" aria-label="Nivel de descubrimiento">
   <div class="ticks" id="ticks" aria-hidden="true"></div>
-  <p style="margin-top:10px">0 prioriza el acierto. Más alto muestra más títulos poco conocidos. Afecta la fila «Elegidas para ti».</p>
+  <div class="ends" aria-hidden="true"><span>Lo más conocido</span><span>Más sorpresas</span></div>
+  <p style="margin-top:10px">En 0 se recomiendan las películas que más probablemente le gusten al usuario, que suelen ser las más conocidas. Al subir, se mezclan títulos menos conocidos que también podrían gustarle. Afecta la fila «Elegidas para ti».</p>
   <label class="chk"><input type="checkbox" id="showpop"> Mostrar la popularidad en las carátulas</label>
   <h3>Llamadas al servicio</h3>
   <p>Cada vez que cambias de perfil o de ajuste, la app le pide datos al servicio de recomendación.</p>
@@ -186,7 +188,7 @@ async function recs(uid, penalty) {
     catch (e) { api = null; setSource(); }
   }
   const u = D.users.find((x) => x.id === uid);
-  log("recomendar(usuario=" + uid + ", penalización=" + penalty + ")", "local", 0);
+  log("recomendar(usuario=" + uid + ", descubrimiento=" + penalty + ")", "local", 0);
   return u.rec[lamIndex(penalty)].map(fromId);
 }
 
@@ -221,7 +223,7 @@ function fill(id, list) {
 function whyText(m) {
   const uid = +$("user").value, p = D.lambdas[+$("lam").value];
   const r = state.recs.findIndex((x) => x.title === m.title);
-  if (r >= 0) return "El servicio la puso en el puesto " + (r + 1) + " de la lista del perfil " + uid + " con penalización " + p + ". Tiene " + m.count + " calificaciones en el catálogo.";
+  if (r >= 0) return "El servicio la puso en el puesto " + (r + 1) + " de la lista del perfil " + uid + " con nivel de descubrimiento " + p + ". Tiene " + m.count + " calificaciones en el catálogo.";
   if (state.liked.some((x) => x.title === m.title)) return "El perfil " + uid + " la calificó entre sus favoritas, y se usa para entender sus gustos.";
   return "Está entre las más calificadas de la plataforma (" + m.count + " calificaciones). Esta fila no depende del perfil.";
 }

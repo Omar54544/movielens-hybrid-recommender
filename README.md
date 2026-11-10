@@ -95,7 +95,7 @@ The API must be running before the client calls a tool.
 
 ## Mock streaming platform (Telón)
 
-`docs/telon.html` simulates a streaming platform that uses the recommender as an external service. Its home page has a featured title and rows of recommendations; a side panel lets the platform set the popularity penalty and shows every call made to the API. The page looks for the API in this order: the `?api=` query parameter, the server it was opened from, and `http://127.0.0.1:8000`. If none answers it falls back to the lists embedded in the page, and a label in the header says which source is in use.
+`docs/telon.html` simulates a streaming platform that uses the recommender as an external service. Its home page has a featured title and rows of recommendations; a side panel lets the platform set the popularity penalty (shown to users of the panel as a "discovery level") and shows every call made to the API. The page looks for the API in this order: the `?api=` query parameter, the server it was opened from, and `http://127.0.0.1:8000`. If none answers it falls back to the lists embedded in the page, and a label in the header says which source is in use.
 
 To use the live API, start it and open the page from the same server:
 

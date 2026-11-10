@@ -95,7 +95,7 @@
 <header>
   <div class="wrap">
     <h1>Hybrid movie recommender</h1>
-    <p class="lede">Ten picks per user from a blend of seven models trained on 100,836 ratings by 610 people. Move the penalty to trade accuracy for variety.</p>
+    <p class="lede">Ten picks per user from a blend of seven models trained on 100,836 ratings by 610 people. Raise the discovery level to trade accuracy for variety.</p>
   </div>
 </header>
 
@@ -106,11 +106,11 @@
       <select id="user"></select>
     </div>
     <div class="slider">
-      <div class="lbl"><label for="lam" style="margin:0">Popularity penalty</label><output id="lamv" for="lam">0</output></div>
+      <div class="lbl"><label for="lam" style="margin:0">Discovery level</label><output id="lamv" for="lam">0</output></div>
       <input type="range" id="lam" min="0" value="0" step="1" aria-describedby="help">
       <div class="ticks" id="ticks" aria-hidden="true"></div>
     </div>
-    <p class="help" id="help">At 0 the list is the most accurate one. Higher values push well-known films down and bring in titles fewer people have rated.</p>
+    <p class="help" id="help">At 0 the list holds the movies the user is most likely to enjoy, which tend to be the well known ones. Higher values mix in less known titles that could also fit.</p>
   </div>
 </div>
 
@@ -172,8 +172,8 @@ function render() {
   const cur = Math.round(mean(list.map((i) => D.counts[i]))), ref = Math.round(mean(u.rec[0].map((i) => D.counts[i])));
   const changed = list.filter((i) => !base.has(i)).length;
   $("summary").innerHTML = k === 0
-    ? "Penalty off. The average title here has <b>" + cur + "</b> ratings."
-    : "The average title has <b>" + cur + "</b> ratings, down from " + ref + " with no penalty. <b>" + changed + " of " + list.length + "</b> are new to this list and appear highlighted.";
+    ? "Discovery off. The average title here has <b>" + cur + "</b> ratings."
+    : "The average title has <b>" + cur + "</b> ratings, down from " + ref + " at level 0. <b>" + changed + " of " + list.length + "</b> are new to this list and appear highlighted.";
 
   $("ustats").textContent = "User " + u.id + " has rated " + u.n + " movies.";
   $("liked").replaceChildren(...u.liked.map((i) => {
